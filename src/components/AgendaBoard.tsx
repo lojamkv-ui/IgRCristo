@@ -488,7 +488,7 @@ export function AgendaBoard({
                     <div className="flex shrink-0 flex-row gap-2 sm:flex-col sm:items-stretch">
                       <Button type="button" variant="gold" size="sm" onClick={() => setFlyerTarget(service)}>
                         <IconSparkles size={15} />
-                        Gerar flyer
+                        Criar no Canva
                       </Button>
                       <div className="flex gap-2">
                         <Link href={`/agenda/${service.id}/editar`} className="btn btn-outline btn-sm flex-1">

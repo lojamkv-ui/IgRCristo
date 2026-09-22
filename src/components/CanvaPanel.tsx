@@ -9,7 +9,6 @@ import {
   IconRefresh,
   IconSearch,
   IconSparkles,
-  IconUpload,
   IconX,
 } from "@/components/icons";
 import { Badge, Button, Skeleton, Spinner, TextInput } from "@/components/ui/primitives";
@@ -32,17 +31,17 @@ export function CanvaMark({ size = 18 }: { size?: number }) {
 
 type Step = "idle" | "working" | "done";
 
+/**
+ * Modelos do Canva: lista os designs e brand templates da conta do usuário
+ * e abre um deles já com as fotos do culto na biblioteca de uploads.
+ * O texto/fundo vem dos prompts — nada é desenhado aqui.
+ */
 export function CanvaPanel({
   serviceId,
   serviceTitle,
-  getImage,
-  format,
 }: {
   serviceId: number;
   serviceTitle: string;
-  /** Devolve o PNG do canvas atual (data URL) e suas dimensões. */
-  getImage: () => Promise<{ dataUrl: string; width: number; height: number } | null>;
-  format: string;
 }) {
   const { toast } = useToast();
   const [status, setStatus] = useState<CanvaStatus | null>(null);
@@ -54,7 +53,6 @@ export function CanvaPanel({
   const [selected, setSelected] = useState<CanvaTemplateItem | null>(null);
   const [step, setStep] = useState<Step>("idle");
   const [result, setResult] = useState<CanvaDesignResult | null>(null);
-  const [mode, setMode] = useState<"upload" | "library">("upload");
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadStatus = useCallback(async () => {
@@ -97,50 +95,26 @@ export function CanvaPanel({
   );
 
   useEffect(() => {
-    if (mode !== "library" || !status?.connected) return;
+    if (!status?.connected) return;
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(() => void loadTemplates(query), templates === null ? 0 : 350);
     return () => {
       if (debounce.current) clearTimeout(debounce.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, query, status?.connected]);
-
-  async function sendArt() {
-    setStep("working");
-    setResult(null);
-    try {
-      const image = await getImage();
-      if (!image) throw new Error("A arte ainda não foi desenhada. Aguarde a pré-visualização.");
-      const response = await api.canva.createDesign({
-        serviceId,
-        mode: "upload",
-        imageDataUrl: image.dataUrl,
-        width: image.width,
-        height: image.height,
-      });
-      setResult(response.data);
-      setStep("done");
-      toast("success", "Design criado no Canva", "Abra para editar textos, fotos e elementos.");
-      void loadStatus();
-    } catch (error) {
-      setStep("idle");
-      toast("error", "Não foi possível enviar ao Canva", errorMessage(error));
-    }
-  }
+  }, [query, status?.connected]);
 
   async function useTemplate(item: CanvaTemplateItem) {
     setStep("working");
     setResult(null);
     try {
-      const image = await getImage();
       const response = await api.canva.createDesign({
         serviceId,
         mode: item.kind === "brand_template" ? "autofill" : "open",
         templateId: item.id,
         templateTitle: item.title,
         templateKind: item.kind,
-        imageDataUrl: image?.dataUrl ?? null,
+        uploadPhotos: true,
       });
       setResult(response.data);
       setStep("done");
@@ -177,10 +151,10 @@ export function CanvaPanel({
         title="Integração com o Canva não configurada"
         body={
           <>
-            Crie um app em <strong>canva.com/developers</strong> (Connect API), habilite os escopos listados em
-            Configurações e defina as variáveis <code>CANVA_CLIENT_ID</code> e <code>CANVA_CLIENT_SECRET</code>{" "}
-            no servidor. Enquanto isso, use a aba <strong>Prompts Canva</strong> para copiar o Prompt 1 (textos) e o
-            Prompt 2 (fundo) e colar no Magic Write / Magic Media, ou baixe o PNG e envie manualmente.
+            Para listar e abrir modelos da sua conta, crie um app em <strong>canva.com/developers</strong>{" "}
+            (Connect API) e defina <code>CANVA_CLIENT_ID</code> e <code>CANVA_CLIENT_SECRET</code> no servidor.
+            Sem a integração, a aba <strong>Prompt</strong> já copia o Prompt 1 e o Prompt 2 para você colar
+            direto no Magic Write / Magic Media.
           </>
         }
         action={
@@ -196,7 +170,7 @@ export function CanvaPanel({
     return (
       <Notice
         title="Conecte sua conta do Canva"
-        body="Autorize o sistema a criar designs e enviar imagens para a sua biblioteca. A autorização é feita com segurança pelo próprio Canva (OAuth)."
+        body="Autorize o sistema a listar seus designs, abrir modelos e enviar as fotos do culto para a sua biblioteca. A autorização é feita com segurança pelo próprio Canva (OAuth)."
         action={
           <a
             href={`/api/canva/connect?returnTo=${encodeURIComponent(`/agenda?destaque=${serviceId}`)}`}
@@ -217,146 +191,132 @@ export function CanvaPanel({
           <CanvaMark size={18} />
           Conectado como <strong className="text-ink-900">{status.user?.displayName ?? "usuário do Canva"}</strong>
         </p>
-        <div className="inline-flex rounded-xl border border-line bg-surface-alt p-1">
-          <button
-            type="button"
-            onClick={() => setMode("upload")}
-            className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold transition ${
-              mode === "upload" ? "bg-white text-brand-700 shadow-sm" : "text-ink-500"
-            }`}
+        <div className="flex gap-2">
+          <a
+            href="https://www.canva.com/magic-write/"
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-outline btn-sm"
           >
-            Enviar esta arte
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("library")}
-            className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold transition ${
-              mode === "library" ? "bg-white text-brand-700 shadow-sm" : "text-ink-500"
-            }`}
+            <IconSparkles size={15} />
+            Magic Write
+          </a>
+          <a
+            href="https://www.canva.com/magic-media/"
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-outline btn-sm"
           >
-            Modelos da minha biblioteca
-          </button>
+            <IconImage size={15} />
+            Magic Media
+          </a>
         </div>
       </div>
 
-      {mode === "upload" ? (
-        <div className="rounded-xl border border-line bg-surface/60 p-4">
-          <p className="font-display text-sm font-bold text-ink-900">Transformar a arte gerada em um design editável</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-ink-500">
-            O flyer desenhado ao lado (tema e formato atuais · {format}) é enviado para a sua biblioteca e aberto como
-            um novo design no Canva, onde você pode ajustar textos, trocar fontes e adicionar elementos.
+      <div className="space-y-3">
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">
+            <IconSearch size={16} />
+          </span>
+          <TextInput
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar nos seus designs e brand templates…"
+            className="pl-9"
+          />
+          {query ? (
+            <button type="button" className="icon-btn absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2" onClick={() => setQuery("")} aria-label="Limpar">
+              <IconX size={14} />
+            </button>
+          ) : null}
+        </div>
+
+        {brandNotice ? (
+          <p className="rounded-lg border border-gold-200 bg-[#fdf8ec] px-3 py-2 text-[12px] leading-snug text-[#7a5a12]">
+            <strong>Brand templates com preenchimento automático</strong> exigem Canva Enterprise. Mostrando seus
+            designs comuns — ao escolher um, as fotos do culto são enviadas para sua biblioteca e o design é aberto
+            para edição.
           </p>
-          <Button type="button" variant="primary" className="mt-3" onClick={() => void sendArt()} loading={step === "working"}>
-            {step === "working" ? null : <IconUpload size={16} />}
-            {step === "working" ? "Enviando ao Canva…" : "Criar design no Canva"}
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">
-              <IconSearch size={16} />
-            </span>
-            <TextInput
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar nos seus designs e brand templates…"
-              className="pl-9"
-            />
-            {query ? (
-              <button type="button" className="icon-btn absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2" onClick={() => setQuery("")} aria-label="Limpar">
-                <IconX size={14} />
-              </button>
-            ) : null}
+        ) : null}
+
+        {loadingTemplates && templates === null ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <Skeleton key={index} className="aspect-[3/4] w-full rounded-xl" />
+            ))}
           </div>
+        ) : templates && templates.length === 0 ? (
+          <Notice
+            title="Nenhum modelo encontrado"
+            body={`Nenhum design ou brand template corresponde à busca para “${serviceTitle}”. Crie ou salve um design na sua conta do Canva e ele aparecerá aqui.`}
+            action={
+              <a href="https://www.canva.com/templates/?query=culto%20igreja" target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
+                <IconExternal size={15} />
+                Explorar modelos no Canva
+              </a>
+            }
+          />
+        ) : (
+          <div className="grid max-h-[420px] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4">
+            {(templates ?? []).map((item) => {
+              const active = selected?.id === item.id;
+              return (
+                <button
+                  key={`${item.kind}-${item.id}`}
+                  type="button"
+                  onClick={() => setSelected(active ? null : item)}
+                  className={`group relative overflow-hidden rounded-xl border bg-white text-left transition ${
+                    active ? "border-brand-500 ring-2 ring-brand-200" : "border-line hover:border-brand-300"
+                  }`}
+                >
+                  <span className="block aspect-[3/4] w-full overflow-hidden bg-surface-alt">
+                    {item.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.thumbnail} alt="" className="h-full w-full object-cover transition group-hover:scale-[1.03]" loading="lazy" />
+                    ) : (
+                      <span className="grid h-full w-full place-items-center text-ink-300">
+                        <IconImage size={26} />
+                      </span>
+                    )}
+                  </span>
+                  <span className="block p-2">
+                    <span className="line-clamp-2 text-[12px] font-semibold leading-snug text-ink-800">{item.title}</span>
+                    <span className="mt-1 flex items-center gap-1">
+                      <Badge tone={item.kind === "brand_template" ? "gold" : "neutral"} className="text-[10px]">
+                        {item.kind === "brand_template" ? "Autofill" : "Design"}
+                      </Badge>
+                      {item.updatedAt ? (
+                        <span className="truncate text-[10px] text-ink-400">{formatRelative(new Date(item.updatedAt * 1000))}</span>
+                      ) : null}
+                    </span>
+                  </span>
+                  {active ? (
+                    <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-brand-600 text-white shadow">
+                      <IconCheck size={13} />
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-          {brandNotice ? (
-            <p className="rounded-lg border border-gold-200 bg-[#fdf8ec] px-3 py-2 text-[12px] leading-snug text-[#7a5a12]">
-              <strong>Brand templates com preenchimento automático</strong> exigem Canva Enterprise. Mostrando seus
-              designs comuns — ao escolher um, as fotos do culto são enviadas para sua biblioteca e o design é aberto
-              para edição.
+        {selected ? (
+          <div className="flex flex-col gap-2 rounded-xl border border-brand-200 bg-brand-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[13px] text-brand-900">
+              <strong>{selected.title}</strong>
+              {selected.kind === "brand_template"
+                ? " — os campos do modelo serão preenchidos com os dados do culto."
+                : " — o design será aberto no Canva com as fotos do culto já na sua biblioteca."}
             </p>
-          ) : null}
-
-          {loadingTemplates && templates === null ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <Skeleton key={index} className="aspect-[3/4] w-full rounded-xl" />
-              ))}
-            </div>
-          ) : templates && templates.length === 0 ? (
-            <Notice
-              title="Nenhum modelo encontrado"
-              body="Crie ou salve um design na sua conta do Canva (por exemplo, a partir de um modelo da biblioteca pública) e ele aparecerá aqui."
-              action={
-                <a href="https://www.canva.com/templates/?query=culto%20igreja" target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
-                  <IconExternal size={15} />
-                  Explorar modelos no Canva
-                </a>
-              }
-            />
-          ) : (
-            <div className="grid max-h-[420px] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4">
-              {(templates ?? []).map((item) => {
-                const active = selected?.id === item.id;
-                return (
-                  <button
-                    key={`${item.kind}-${item.id}`}
-                    type="button"
-                    onClick={() => setSelected(active ? null : item)}
-                    className={`group relative overflow-hidden rounded-xl border bg-white text-left transition ${
-                      active ? "border-brand-500 ring-2 ring-brand-200" : "border-line hover:border-brand-300"
-                    }`}
-                  >
-                    <span className="block aspect-[3/4] w-full overflow-hidden bg-surface-alt">
-                      {item.thumbnail ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.thumbnail} alt="" className="h-full w-full object-cover transition group-hover:scale-[1.03]" loading="lazy" />
-                      ) : (
-                        <span className="grid h-full w-full place-items-center text-ink-300">
-                          <IconImage size={26} />
-                        </span>
-                      )}
-                    </span>
-                    <span className="block p-2">
-                      <span className="line-clamp-2 text-[12px] font-semibold leading-snug text-ink-800">{item.title}</span>
-                      <span className="mt-1 flex items-center gap-1">
-                        <Badge tone={item.kind === "brand_template" ? "gold" : "neutral"} className="text-[10px]">
-                          {item.kind === "brand_template" ? "Autofill" : "Design"}
-                        </Badge>
-                        {item.updatedAt ? (
-                          <span className="truncate text-[10px] text-ink-400">{formatRelative(new Date(item.updatedAt * 1000))}</span>
-                        ) : null}
-                      </span>
-                    </span>
-                    {active ? (
-                      <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-brand-600 text-white shadow">
-                        <IconCheck size={13} />
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {selected ? (
-            <div className="flex flex-col gap-2 rounded-xl border border-brand-200 bg-brand-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-[13px] text-brand-900">
-                <strong>{selected.title}</strong>
-                {selected.kind === "brand_template"
-                  ? " — os campos do modelo serão preenchidos com os dados do culto."
-                  : " — o design será aberto no Canva com as fotos do culto já na sua biblioteca."}
-              </p>
-              <Button type="button" variant="primary" size="sm" onClick={() => void useTemplate(selected)} loading={step === "working"}>
-                {step === "working" ? null : <IconSparkles size={15} />}
-                {selected.kind === "brand_template" ? "Preencher e criar" : "Abrir no Canva"}
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      )}
+            <Button type="button" variant="primary" size="sm" onClick={() => void useTemplate(selected)} loading={step === "working"}>
+              {step === "working" ? null : <IconSparkles size={15} />}
+              {selected.kind === "brand_template" ? "Preencher e criar" : "Abrir no Canva"}
+            </Button>
+          </div>
+        ) : null}
+      </div>
 
       {result ? (
         <div className="animate-pop-in flex flex-col gap-3 rounded-xl border border-success/30 bg-success-soft p-4 sm:flex-row sm:items-center">
@@ -369,9 +329,7 @@ export function CanvaPanel({
             <p className="text-[12px] text-ink-600">
               {result.source === "autofill"
                 ? `${result.filledFields.length} campo(s) preenchido(s)${result.skippedFields.length ? ` · ${result.skippedFields.length} sem correspondência: ${result.skippedFields.join(", ")}` : ""}`
-                : result.source === "upload"
-                  ? "Design criado com a arte do flyer. Válido por 30 dias no link abaixo; fica salvo na sua conta."
-                  : `${result.uploadedAssets.length} imagem(ns) enviada(s) para sua biblioteca de uploads.`}
+                : `${result.uploadedAssets.length} imagem(ns) enviada(s) para sua biblioteca de uploads.`}
             </p>
           </div>
           {result.design.editUrl ? (
@@ -397,8 +355,7 @@ export function CanvaPanel({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-semibold text-ink-800">{design.title ?? design.designId}</span>
                   <span className="block text-[11px] text-ink-400">
-                    {design.source === "autofill" ? "Modelo preenchido" : design.source === "upload" ? "Arte enviada" : "Modelo aberto"} ·{" "}
-                    {formatRelative(design.createdAt)}
+                    {design.source === "autofill" ? "Modelo preenchido" : "Modelo aberto"} · {formatRelative(design.createdAt)}
                   </span>
                 </span>
                 {design.editUrl ? (

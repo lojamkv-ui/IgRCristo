@@ -93,7 +93,7 @@ export default async function HomePage() {
                   <Badge tone="gold">{whenLabel(next.serviceDate)}</Badge>
                   <Link href={`/agenda?destaque=${next.id}`} className="btn btn-sm bg-white text-brand-800 hover:bg-brand-50">
                     <IconSparkles size={15} />
-                    Gerar flyer
+                    Criar no Canva
                   </Link>
                 </div>
               </>

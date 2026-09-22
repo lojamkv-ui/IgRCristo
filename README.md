@@ -1,25 +1,26 @@
 # Igreja Renascendo em Cristo — Gestão de membros e agenda
 
-Sistema completo de cadastro de membros (com foto, cargos eclesiásticos e locais, parentesco e histórico de alterações) e agenda de cultos com geração de flyer e integração com o Canva.
+Sistema completo de cadastro de membros (com foto, cargos eclesiásticos e locais, parentesco e histórico de alterações) e agenda de cultos com criação de flyer via prompts prontos para o Canva (copiar e abrir), modelos da biblioteca e dicas de montagem.
 
 **Igreja:** Igreja Renascendo em Cristo — Sede · Trindade - GO  
 **Repositório:** https://github.com/lojamkv-ui/IgRCristo
 
 ## Flyers e prompts para o Canva
 
-Em cada culto da agenda, clique em **Gerar flyer**. Há quatro abas:
+Em cada culto da agenda, clique em **Criar no Canva**. O site não desenha mais o flyer: ele gera o prompt, copia e abre o Canva. Há três abas:
 
-1. **Flyer** — arte gerada no navegador (Canvas), com temas e formatos (Stories 1080×1920 ou Feed 1080×1350).
-2. **Canva** — envia a arte ou preenche um modelo da sua biblioteca (requer Connect API).
-3. **Prompts Canva** — prompts prontos, no estilo:
+1. **Prompt** — o sistema **gera o prompt personalizado, copia e abre o Canva**: você só cola no Magic Write / Magic Media (formato padrão Feed 1080×1350 ou Stories 1080×1920). Inclui:
+2. **Modelos** — lista os designs e brand templates da sua conta do Canva e abre um já com as fotos do culto (requer Connect API).
+3. **Legenda** — texto para WhatsApp/Instagram.
+
+Detalhe dos prompts (aba Prompt):
    - **Prompt 1 (Texto):** *“Aja como um designer especialista em mídias sociais para igrejas…”* — cole no Magic Write.
    - **Prompt 2 (Fundo):** *“Crie um fundo moderno para flyer de culto evangélico no formato retrato (1080×1350)…”* — cole no Magic Media.
    - **Textos prontos:** título, data, pregador, versículo e rodapé para colar direto nos elementos.
    - **Magic Studio:** prompt único de layout + cores + dados do culto.
    - **Como montar:** dicas de formato, fundo, foto do pregador e fontes.
-4. **Legenda** — texto para WhatsApp/Instagram com hashtags.
 
-Os prompts já saem preenchidos com data, horário, pregador, dirigente, endereço, CNPJ e contato da igreja.
+Os prompts já saem preenchidos com data, horário, pregador, dirigente, endereço, CNPJ e contato da igreja — e são copiados automaticamente assim que ficam prontos.
 
 ## Stack
 

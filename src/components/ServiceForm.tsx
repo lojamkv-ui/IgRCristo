@@ -585,7 +585,7 @@ export function ServiceForm({
                 <Row label="Intercessores" value={form.intercessors.join(", ")} />
               </dl>
               <p className="rounded-lg bg-white/10 px-3 py-2 text-[12px] leading-snug text-brand-100">
-                Após salvar, use <strong>Gerar flyer</strong> na agenda para montar a arte com fotos e os dados
+                Após salvar, use <strong>Criar no Canva</strong> na agenda para gerar o prompt com fotos e dados
                 oficiais da igreja.
               </p>
             </div>
